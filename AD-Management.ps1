@@ -11,7 +11,7 @@
 .OUTPUTS
   None
 .NOTES
-  Version:        1.1
+  Version:        1.0
   Author:         Acidcrash376
   Creation Date:  02/03/2020
   Purpose/Change: Initial script development
