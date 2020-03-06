@@ -11,11 +11,11 @@
 .OUTPUTS
   None
 .NOTES
-  Version:        1.0
+  Version:        1.0.3
   Author:         Acidcrash376
   Creation Date:  02/03/2020
   Purpose/Change: Initial script development
-  Web:            https://github.com/acidcrash376
+  Web:            https://github.com/acidcrash376/AD-Management/
 .EXAMPLE
   ./AD-Management.ps1
   
@@ -68,7 +68,7 @@ Function <FunctionName> {
 function Test-Password {
 Param ()
 Begin {
-    Write-Host "Script starting"
+    Write-Host "Display Last Generated Password"
     }
 Process {
     Try {
@@ -86,7 +86,7 @@ Process {
   }
   End {
     If ($?) {
-      Write-Host 'User Created Successfully.'
+      Write-Host ' '
       Write-Host ' '
     }
   }
@@ -197,7 +197,7 @@ Process {
             ###########
             $user = Read-Host 'What is the Name or Logon of the User?'
             $suser = '*'+$user+'*'
-            get-aduser -filter "(name -like '$suser') -Or (SamAccountName -like '$suser')" | ft Name,DistinguishedName
+            get-aduser -filter "(name -like '$suser') -Or (SamAccountName -like '$suser')" | ft Title,Name,SamAccountName,DistinguishedName
             #Get-ADObject -Filter 'Name -like $searchedcomputer' | ft Name,DistinguishedName
             Write-Host ''
             }
@@ -239,8 +239,9 @@ Process {
         #Prompts for User's first and second name, then combines for the Full Name and, at present, the Display name
         $givenname = Read-Host 'What is the users First Name?' 
         $surname = Read-Host 'What is the users Surname?'
+        $rank = Read-Host 'What is the users Rank or Title?'
         $fullname = $givenname + ' ' + $surname
-        $displayname = $givenname + ' ' + $surname
+        $displayname = $rank + ' ' +$givenname + ' ' + $surname
         #Defines the logon name in the format of surname + first character of first name and a digit value. 
         #In a later version, I want it to check if the user already exists and increment the number
         $suser = $surname+$givenname.substring(0,1)+'100'
@@ -492,10 +493,10 @@ Process {
 #############
 # SetUserPW #
 #############
-Function SetUserPW {
+Function ResetUserPW {
 Param (
-        [String]$user = $(Write-Host 'Enter the logon for the user you want to set a password for: ' -foregroundcolor Yellow -NoNewLine; Read-Host),
-        [String]$temppass = $(Write-Host 'Enter the desired temporary password: ' -Foregroundcolor Yellow; Read-Host -AsSecureString)
+        [String]$script:suser = $(Write-Host 'Enter the logon for the user you want to set a password for: ' -foregroundcolor Yellow -NoNewLine; Read-Host),
+        $temppass = $(Write-Host 'Enter the desired temporary password: ' -Foregroundcolor Yellow; Read-Host -AsSecureString)
 )
 Begin {
 }
@@ -509,7 +510,7 @@ Process {
             $udn = Get-ADUser -Filter 'SamAccountName -eq $suser' | select -ExpandProperty DistinguishedName
             #$temppass = Read-Host 'Enter the desired temporary password'
 
-            Set-ADAccountPassword -Identity $udn -Reset -NewPassword (ConvertTo-SecureString -AsPlainText $temppass -Force)
+            Set-ADAccountPassword -Identity $script:suser -Reset -NewPassword (ConvertTo-SecureString -AsPlainText $temppass -Force)
             }
             Catch {
             Write-Host -BackgroundColor Red "Error: $($_.Exception)"
@@ -519,6 +520,81 @@ Process {
         End {
             If ($?) {
                       Write-Host 'Password sucessfully changed for user'$user -ForegroundColor Green
+                      Write-Host ' '
+                      Pause-ForInput
+                      Start-Options
+                    }
+        }
+}
+
+######################
+# CheckUserLockedout #
+######################
+Function CheckUserLockedOut {
+Param (
+        [String]$script:suser = $(Write-Host 'Enter the logon for the user you want to check: ' -foregroundcolor Yellow -NoNewLine; Read-Host)
+        
+)
+Begin {
+}
+Process {
+        Try {
+            $lockedoutresult = 'blank'
+            $lockedoutuser = (Get-Aduser $script:suser -Properties LockedOut).LockedOut
+            $enableduser = (Get-Aduser $script:suser -Properties Enabled).Enabled
+            if ( $lockedoutuser -eq $true) { $lockedoutresult = 'is locked out.' }
+            elseif (($lockedoutuser -eq $true) -and ($enableduser -eq $false )) { $lockedoutresult = 'is locked out and is disabled.' }
+            elseif (($lockedoutuser -eq $true) -and ($enableduser -eq $true )) { $lockedoutresult = 'is locked out.' }
+            elseif (($lockedoutuser -eq $false) -and ($enableduser -eq $false )) { $lockedoutresult = 'is not locked out but is disabled.' }
+            elseif (($lockedoutuser -eq $false) -and ($enableduser -eq $true )) { $lockedoutresult = 'is not locked out.' }
+            else {Write-Host 'How on earth did you get this result?!' }
+            }
+            Catch {
+            Write-Host -BackgroundColor Red "Error: $($_.Exception)"
+            Break
+            }
+        }
+        End {
+            If ($?) {
+                      Write-Host $script:suser -ForegroundColor Green $lockedoutresult
+                      Write-Host ' '
+                      Pause-ForInput
+                      Start-Options
+                    }
+        }
+}
+
+##############
+# UnlockUser #
+##############
+Function UnlockUser {
+Param (
+        [String]$script:suser = $(Write-Host 'Enter the logon for the user you want to check: ' -foregroundcolor Yellow -NoNewLine; Read-Host)
+        
+)
+Begin {
+}
+Process {
+        Try {
+            $lockedoutresult = 'blank'
+            $lockedoutuser = (Get-Aduser $script:suser -Properties LockedOut).LockedOut
+            #$enableduser = (Get-Aduser $script:suser -Properties Enabled).Enabled
+            if ( $lockedoutuser -eq $true) {Unlock-ADAccount -Identity $script:suser 
+            $lockedoutresult = 'is now unlocked' }
+            elseif ($lockedoutuser -eq $false) 
+            {$lockedoutresult = 'is not locked out.'}
+            elseif ($lockedoutuser -eq $true) 
+            {$lockedoutresult = 'is locked out.'}
+            else {Write-Host 'How on earth did you get this result?!'}
+            }
+            Catch {
+            Write-Host -BackgroundColor Red "Error: $($_.Exception)"
+            Break
+            }
+            }
+        End {
+            If ($?) {
+                      Write-Host $script:suser -ForegroundColor Green $lockedoutresult
                       Write-Host ' '
                       Pause-ForInput
                       Start-Options
@@ -596,9 +672,233 @@ Process {
         }
 }
 
+##################
+# EnableComputer #
+##################
+Function EnableComputer {
+Param ()
+Begin {
+}
+Process {
+        Try {
+            ###########
+            #Variables#
+            ###########
+            }
+            Catch {
+            Write-Host -BackgroundColor Red "Error: $($_.Exception)"
+            Break
+            }
+        }
+        End {
+            If ($?) {
+                      Write-Host 'Function to be removed'
+                      Write-Host ' '
+                      Pause-ForInput
+                      Start-Options
+                    }
+        }
+}
+
+###################
+# DisableComputer #
+###################
+Function DisableComputer {
+Param ()
+Begin {
+}
+Process {
+        Try {
+            ###########
+            #Variables#
+            ###########
+            }
+            Catch {
+            Write-Host -BackgroundColor Red "Error: $($_.Exception)"
+            Break
+            }
+        }
+        End {
+            If ($?) {
+                      Write-Host Write-Host 'Function to be removed'
+                      Write-Host ' '
+                      Pause-ForInput
+                      Start-Options
+                    }
+        }
+}
+
 ##################################################
 #                                          Groups#
 ##################################################
+
+##################
+# SearchSecGroup #
+##################
+Function SearchSecGroup {
+Param ()
+Begin {
+}
+Process {
+        Try {
+            ###########
+            #Variables#
+            ###########
+            }
+            Catch {
+            Write-Host -BackgroundColor Red "Error: $($_.Exception)"
+            Break
+            }
+        }
+        End {
+            If ($?) {
+                      Write-Host 'Function not yet implemented'
+                      Write-Host ' '
+                      Pause-ForInput
+                      Start-Options
+                    }
+        }
+}
+
+##################
+# NewSecGroup #
+##################
+Function NewSecGroup {
+Param ()
+Begin {
+}
+Process {
+        Try {
+            ###########
+            #Variables#
+            ###########
+            }
+            Catch {
+            Write-Host -BackgroundColor Red "Error: $($_.Exception)"
+            Break
+            }
+        }
+        End {
+            If ($?) {
+                      Write-Host 'Function not yet implemented'
+                      Write-Host ' '
+                      Pause-ForInput
+                      Start-Options
+                    }
+        }
+}
+
+##################
+# RemoveSecGroup #
+##################
+Function RemoveSecGroup {
+Param ()
+Begin {
+}
+Process {
+        Try {
+            ###########
+            #Variables#
+            ###########
+            }
+            Catch {
+            Write-Host -BackgroundColor Red "Error: $($_.Exception)"
+            Break
+            }
+        }
+        End {
+            If ($?) {
+                      Write-Host 'Function not yet implemented'
+                      Write-Host ' '
+                      Pause-ForInput
+                      Start-Options
+                    }
+        }
+}
+
+##################
+# ListUserSecGroup #
+##################
+Function ListUserSecGroup {
+Param ()
+Begin {
+}
+Process {
+        Try {
+            ###########
+            #Variables#
+            ###########
+            }
+            Catch {
+            Write-Host -BackgroundColor Red "Error: $($_.Exception)"
+            Break
+            }
+        }
+        End {
+            If ($?) {
+                      Write-Host 'Function not yet implemented'
+                      Write-Host ' '
+                      Pause-ForInput
+                      Start-Options
+                    }
+        }
+}
+
+#####################
+# AddUserToSecGroup #
+#####################
+Function AddUserToSecGroup {
+Param ()
+Begin {
+}
+Process {
+        Try {
+            ###########
+            #Variables#
+            ###########
+            }
+            Catch {
+            Write-Host -BackgroundColor Red "Error: $($_.Exception)"
+            Break
+            }
+        }
+        End {
+            If ($?) {
+                      Write-Host 'Function not yet implemented'
+                      Write-Host ' '
+                      Pause-ForInput
+                      Start-Options
+                    }
+        }
+}
+
+##########################
+# RemoveUserFromSecGroup #
+##########################
+Function RemoveUserFromSecGroup {
+Param ()
+Begin {
+}
+Process {
+        Try {
+            ###########
+            #Variables#
+            ###########
+            }
+            Catch {
+            Write-Host -BackgroundColor Red "Error: $($_.Exception)"
+            Break
+            }
+        }
+        End {
+            If ($?) {
+                      Write-Host 'Function not yet implemented'
+                      Write-Host ' '
+                      Pause-ForInput
+                      Start-Options
+                    }
+        }
+}
 
 
 
@@ -633,18 +933,20 @@ Process {
                 11 { EnableUser }
                 12 { DisableUser }
                 13 { ResetUserPW }
-                14 { SearchComputer }
-                15 { SetComputerOU }
-                16 { EnableComputer }
-                17 { DisableComputer }
-                18 { SearchSecGroup }
-                19 { NewSecGroup }
-                20 { RemoveSecGroup }
-                21 { AddUserToSecGroup }
-                22 { RemoveUserFromSecGroup }
-                23 { ListUsersInSecGroup }
-                24 { Exit }
-                25 { test-password }
+                14 { CheckUserLockedOut }
+                15 { UnlockUser }
+                16 { SearchComputer }
+                17 { SetComputerOU }
+                18 { EnableComputer }
+                19 { DisableComputer }
+                20 { SearchSecGroup }
+                21 { NewSecGroup }
+                22 { RemoveSecGroup }
+                23 { ListUserSecGroup }
+                24 { AddUserToSecGroup }
+                25 { RemoveUserFromSecGroup }
+                26 { Exit }
+                27 { test-password }
                 }
                 Start-Menu
             }
@@ -673,28 +975,20 @@ Begin {
 Process {
         Try {
             Clear-Host
+            Write-Host '                 ' -NoNewLine; Write-Host ' [' -ForegroundColor Red -BackgroundColor White -NoNewline; Write-Host 'Active Directory Manamgenent Tasks'  -ForegroundColor Black -BackgroundColor White -NoNewline; Write-Host '] ' -ForegroundColor Red -BackgroundColor White
+            Write-Host '                 ' -NoNewLine; Write-Host ' [' -ForegroundColor Red -BackgroundColor White -NoNewline; Write-Host '          Version 1.0.3           '  -ForegroundColor Black -BackgroundColor White -NoNewline; Write-Host '] ' -ForegroundColor Red -BackgroundColor White
             Write-Host ' '
-            Write-Host ' Active Directory Manamgenent Tasks '
-            Write-Host ' ================================== '
-            Write-Host ' '
-            Write-Host ' '
-            Write-Host ' Options: '
-            Write-Host ' --------'
-            Write-Host ' '
-            Write-Host '  Misc '
-            Write-Host ' ======'
+            Write-Host '      ' -NoNewLine; Write-Host ' [' -ForegroundColor Red -BackgroundColor White -NoNewline; Write-Host '  Misc '  -ForegroundColor Black -BackgroundColor White -NoNewline; Write-Host '] ' -ForegroundColor Red -BackgroundColor White
             Write-Host '  0 - Generate a random Default Password '
             Write-Host '  1 - Generate a random Secure Password '
             Write-Host ' '
-            Write-Host '  Organisational Units (OU)'
-            Write-Host ' ==========================='
+            Write-Host '      ' -NoNewLine; Write-Host ' [' -ForegroundColor Red -BackgroundColor White -NoNewline; Write-Host '  Organisational Units (OU)'  -ForegroundColor Black -BackgroundColor White -NoNewline; Write-Host '] ' -ForegroundColor Red -BackgroundColor White
             Write-Host ' '
             Write-Host '  2 - Search OU'
             Write-Host '  3 - Create OU'
             Write-Host '  4 - Remove OU'
             Write-Host ' '
-            Write-Host '  Users'
-            Write-Host ' ======='
+            Write-Host '      ' -NoNewLine; Write-Host ' [' -ForegroundColor Red -BackgroundColor White -NoNewline; Write-Host '  Users'  -ForegroundColor Black -BackgroundColor White -NoNewline; Write-Host '] ' -ForegroundColor Red -BackgroundColor White
             Write-Host '  5 - Search for a User'
             Write-Host '  6 - Add a User'
             Write-Host '  7 - Remove a User'
@@ -704,24 +998,24 @@ Process {
             Write-Host ' 11 - Enable User'
             Write-Host ' 12 - Disable User'
             Write-Host ' 13 - Reset User password'
+            Write-Host ' 14 - Check is User locked out'
+            Write-Host ' 15 - Unlock User account '
             Write-Host ' '
-            Write-Host '  Computers'
-            Write-Host ' ==========='
-            Write-Host ' 14 - Search for a Computer '
-            Write-Host ' 15 - Set Computer OU'
-            Write-Host ' 16 - Enable Computer'
-            Write-Host ' 17 - Disable Computer'
+            Write-Host '      ' -NoNewLine; Write-Host ' [' -ForegroundColor Red -BackgroundColor White -NoNewline; Write-Host '  Computers'  -ForegroundColor Black -BackgroundColor White -NoNewline; Write-Host '] ' -ForegroundColor Red -BackgroundColor White
+            Write-Host ' 16 - Search for a Computer '
+            Write-Host ' 17 - Set Computer OU'
+            Write-Host ' 18 - Enable Computer [DISABLED]'
+            Write-Host ' 19 - Disable Computer [DISABLED]'
             Write-Host ' '
-            Write-Host '  Groups'
-            Write-Host ' ========'
-            Write-Host ' 18 - Search Security Groups'
-            Write-Host ' 19 - Create a Security Group'
-            Write-Host ' 20 - Remove a Security Group'
-            Write-Host ' 21 - Add User to a Security Group '
-            Write-Host ' 22 - Remove User from a Security Group '
+            Write-Host '      ' -NoNewLine; Write-Host ' [' -ForegroundColor Red -BackgroundColor White -NoNewline; Write-Host '  Groups'  -ForegroundColor Black -BackgroundColor White -NoNewline; Write-Host '] ' -ForegroundColor Red -BackgroundColor White
+            Write-Host ' 20 - Search Security Groups'
+            Write-Host ' 21 - Create a Security Group'
+            Write-Host ' 22 - Remove a Security Group'
             Write-Host ' 23 - List Users in a Security Group '
+            Write-Host ' 24 - Add User to a Security Group '
+            Write-Host ' 25 - Remove User from a Security Group '
             Write-Host ' '
-            Write-Host ' 24 - Exit Script'
+            Write-Host ' 26 - Exit Script'
             Write-Host ' '
             Start-Menu
             }
