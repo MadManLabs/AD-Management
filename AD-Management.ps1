@@ -11,7 +11,7 @@
 .OUTPUTS
   None
 .NOTES
-  Version:        1.0.3
+  Version:        1.0.4
   Author:         Acidcrash376
   Creation Date:  02/03/2020
   Purpose/Change: Initial script development
@@ -141,6 +141,7 @@ Process {
         }
         End {
             If ($?) {
+                      Write-Host ' '
                       Write-Host 'Random Password is:' $script:password
                       Write-Host ' '
                       Pause-ForInput
@@ -180,6 +181,105 @@ Process {
 }
 
 ##################################################
+#                                            OU's#
+##################################################
+
+############
+# SearchOU #
+############
+Function SearchOU {
+Param ()
+Begin {
+}
+Process {
+        Try {
+            ###########
+            #Variables#
+            ###########
+            $ou = Read-Host 'What is the name of the Organisational Unit?'
+            $sou = "*"+$ou+"*"
+            Get-ADOrganizationalUnit -Filter 'name -like $sou' | ft Name,DistinguishedName
+            Write-Host ''
+            }
+            Catch {
+            Write-Host -BackgroundColor Red "Error: $($_.Exception)"
+            Break
+            }
+        }
+        End {
+            If ($?) {
+                      Write-Host 'Search Complete.'
+                      Write-Host ' '
+                      Pause-ForInput
+                      Start-Options
+                    }
+        }
+}
+
+############
+# NewOU #
+############
+Function NewOU {
+Param ()
+Begin {
+}
+Process {
+        Try {
+            ###########
+            #Variables#
+            ###########
+            $newouname = Read-Host 'What is the name of the new Organisational Unit?'
+            #$souname = Read-Host 'What is the SAM Name of the OU? [No spaces or special characters]'
+            $oupath = Read-Host 'Where is the OU to be created? This should be in Distinguished Name format [OU=X,DC=y,DC=Z]'
+            New-ADOrganizationalUnit -Name $newouname -Path $oupath -ProtectedFromAccidentalDeletion:$False
+            }
+            Catch {
+            Write-Host -BackgroundColor Red "Error: $($_.Exception)"
+            Break
+            }
+        }
+        End {
+            If ($?) {
+                      Write-Host $newouname 'has been successfully created.'
+                      Write-Host ' '
+                      Pause-ForInput
+                      Start-Options
+                    }
+        }
+}
+
+############
+# RemoveOU #
+############
+Function RemoveOU {
+Param ()
+Begin {
+}
+Process {
+        Try {
+            ###########
+            #Variables#
+            ###########
+            $ouname = Read-Host 'What is the Distinguished Name of the Organisational Unit you want to remove? [OU=X,DC=Y,DC=Z]'
+            Write-Host '  !!!WARNING!!! ' -ForegroundColor Red -BackgroundColor Black -NoNewline; Write-Host ' This will delete any child objects! ' -NoNewline;Write-Host ' !!!WARNING!!! ' -ForegroundColor Red -BackgroundColor Black -NoNewline
+            Remove-ADOrganizationalUnit -Identity $ouname -Confirm:$false
+            }
+            Catch {
+            Write-Host -BackgroundColor Red "Error: $($_.Exception)"
+            Break
+            }
+        }
+        End {
+            If ($?) {
+                      Write-Host $ouname 'has been successfully removed.'
+                      Write-Host ' '
+                      Pause-ForInput
+                      Start-Options
+                    }
+        }
+}
+
+##################################################
 #                                           Users#
 ##################################################
 
@@ -198,7 +298,6 @@ Process {
             $user = Read-Host 'What is the Name or Logon of the User?'
             $suser = '*'+$user+'*'
             get-aduser -filter "(name -like '$suser') -Or (SamAccountName -like '$suser')" | ft Title,Name,SamAccountName,DistinguishedName
-            #Get-ADObject -Filter 'Name -like $searchedcomputer' | ft Name,DistinguishedName
             Write-Host ''
             }
             Catch {
@@ -621,7 +720,6 @@ Process {
             $computer = Read-Host 'What is the name of the Computer?'
             $searchedcomputer = '*'+$computer+'*'
             Get-ADComputer -Filter 'ObjectClass -eq "Computer"' | Where-Object name -Like $searchedcomputer | ft Name,DistinguishedName
-            #Get-ADObject -Filter 'Name -like $searchedcomputer' | ft Name,DistinguishedName
             Write-Host ''
             }
             Catch {
@@ -744,6 +842,9 @@ Process {
             ###########
             #Variables#
             ###########
+            $group = Read-Host 'What is the name of the Security Group?'
+            $sgroup = "*"+$group+"*"
+            Get-ADGroup -Filter {(groupcategory -eq 'Security') -and (name -like $sgroup)} | ft Name,DistinguishedName,SamAccountName
             }
             Catch {
             Write-Host -BackgroundColor Red "Error: $($_.Exception)"
@@ -752,7 +853,7 @@ Process {
         }
         End {
             If ($?) {
-                      Write-Host 'Function not yet implemented'
+                      #Write-Host 'Function not yet implemented'
                       Write-Host ' '
                       Pause-ForInput
                       Start-Options
@@ -772,6 +873,12 @@ Process {
             ###########
             #Variables#
             ###########
+            
+            $newgroupname = Read-Host 'What is the name of the new Security Group?'
+            #$souname = Read-Host 'What is the SAM Name of the OU? [No spaces or special characters]'
+            $grouppath = Read-Host 'Where is the OU to be created? This should be in Distinguished Name format [OU=X,DC=y,DC=Z]'
+            $groupdescription = Read-Host 'What is the description of the OU to be?'
+            New-ADGroup -Name $newgroupname -SamAccountName $newgroupname -GroupCategory Security -GroupScope Global -DisplayName $newgroupname -Path $grouppath -Description $groupdescription
             }
             Catch {
             Write-Host -BackgroundColor Red "Error: $($_.Exception)"
@@ -780,7 +887,7 @@ Process {
         }
         End {
             If ($?) {
-                      Write-Host 'Function not yet implemented'
+                      #Write-Host 'Function not yet implemented'
                       Write-Host ' '
                       Pause-ForInput
                       Start-Options
@@ -800,6 +907,8 @@ Process {
             ###########
             #Variables#
             ###########
+            $groupname = Read-Host 'What is the name of the Security Group you want to remove?'
+            Remove-ADGroup -Identity $groupname -Confirm:$false
             }
             Catch {
             Write-Host -BackgroundColor Red "Error: $($_.Exception)"
@@ -808,7 +917,7 @@ Process {
         }
         End {
             If ($?) {
-                      Write-Host 'Function not yet implemented'
+                      #Write-Host 'Function not yet implemented'
                       Write-Host ' '
                       Pause-ForInput
                       Start-Options
@@ -922,7 +1031,7 @@ Process {
                 0 { RandomDefaultPassword }
                 1 { RandomSecurePassword }
                 2 { SearchOU }
-                3 { CreateOU }
+                3 { NewOU }
                 4 { RemoveOU }
                 5 { SearchUser }
                 6 { NewUser }
@@ -975,20 +1084,22 @@ Begin {
 Process {
         Try {
             Clear-Host
+            Write-Host ' '
+            Write-Host ' '
             Write-Host '                 ' -NoNewLine; Write-Host ' [' -ForegroundColor Red -BackgroundColor White -NoNewline; Write-Host 'Active Directory Manamgenent Tasks'  -ForegroundColor Black -BackgroundColor White -NoNewline; Write-Host '] ' -ForegroundColor Red -BackgroundColor White
-            Write-Host '                 ' -NoNewLine; Write-Host ' [' -ForegroundColor Red -BackgroundColor White -NoNewline; Write-Host '          Version 1.0.3           '  -ForegroundColor Black -BackgroundColor White -NoNewline; Write-Host '] ' -ForegroundColor Red -BackgroundColor White
+            Write-Host '                 ' -NoNewLine; Write-Host ' [' -ForegroundColor Red -BackgroundColor White -NoNewline; Write-Host '          Version 1.0.4           '  -ForegroundColor Black -BackgroundColor White -NoNewline; Write-Host '] ' -ForegroundColor Red -BackgroundColor White
             Write-Host ' '
             Write-Host '      ' -NoNewLine; Write-Host ' [' -ForegroundColor Red -BackgroundColor White -NoNewline; Write-Host '  Misc '  -ForegroundColor Black -BackgroundColor White -NoNewline; Write-Host '] ' -ForegroundColor Red -BackgroundColor White
             Write-Host '  0 - Generate a random Default Password '
             Write-Host '  1 - Generate a random Secure Password '
             Write-Host ' '
-            Write-Host '      ' -NoNewLine; Write-Host ' [' -ForegroundColor Red -BackgroundColor White -NoNewline; Write-Host '  Organisational Units (OU)'  -ForegroundColor Black -BackgroundColor White -NoNewline; Write-Host '] ' -ForegroundColor Red -BackgroundColor White
+            Write-Host '      ' -NoNewLine; Write-Host ' [' -ForegroundColor Red -BackgroundColor White -NoNewline; Write-Host '  Organisational Units (OU)  '  -ForegroundColor Black -BackgroundColor White -NoNewline; Write-Host '] ' -ForegroundColor Red -BackgroundColor White
             Write-Host ' '
             Write-Host '  2 - Search OU'
             Write-Host '  3 - Create OU'
             Write-Host '  4 - Remove OU'
             Write-Host ' '
-            Write-Host '      ' -NoNewLine; Write-Host ' [' -ForegroundColor Red -BackgroundColor White -NoNewline; Write-Host '  Users'  -ForegroundColor Black -BackgroundColor White -NoNewline; Write-Host '] ' -ForegroundColor Red -BackgroundColor White
+            Write-Host '      ' -NoNewLine; Write-Host ' [' -ForegroundColor Red -BackgroundColor White -NoNewline; Write-Host '  Users  '  -ForegroundColor Black -BackgroundColor White -NoNewline; Write-Host '] ' -ForegroundColor Red -BackgroundColor White
             Write-Host '  5 - Search for a User'
             Write-Host '  6 - Add a User'
             Write-Host '  7 - Remove a User'
@@ -1001,13 +1112,13 @@ Process {
             Write-Host ' 14 - Check is User locked out'
             Write-Host ' 15 - Unlock User account '
             Write-Host ' '
-            Write-Host '      ' -NoNewLine; Write-Host ' [' -ForegroundColor Red -BackgroundColor White -NoNewline; Write-Host '  Computers'  -ForegroundColor Black -BackgroundColor White -NoNewline; Write-Host '] ' -ForegroundColor Red -BackgroundColor White
+            Write-Host '      ' -NoNewLine; Write-Host ' [' -ForegroundColor Red -BackgroundColor White -NoNewline; Write-Host '  Computers  '  -ForegroundColor Black -BackgroundColor White -NoNewline; Write-Host '] ' -ForegroundColor Red -BackgroundColor White
             Write-Host ' 16 - Search for a Computer '
             Write-Host ' 17 - Set Computer OU'
             Write-Host ' 18 - Enable Computer [DISABLED]'
             Write-Host ' 19 - Disable Computer [DISABLED]'
             Write-Host ' '
-            Write-Host '      ' -NoNewLine; Write-Host ' [' -ForegroundColor Red -BackgroundColor White -NoNewline; Write-Host '  Groups'  -ForegroundColor Black -BackgroundColor White -NoNewline; Write-Host '] ' -ForegroundColor Red -BackgroundColor White
+            Write-Host '      ' -NoNewLine; Write-Host ' [' -ForegroundColor Red -BackgroundColor White -NoNewline; Write-Host '  Groups  '  -ForegroundColor Black -BackgroundColor White -NoNewline; Write-Host '] ' -ForegroundColor Red -BackgroundColor White
             Write-Host ' 20 - Search Security Groups'
             Write-Host ' 21 - Create a Security Group'
             Write-Host ' 22 - Remove a Security Group'
@@ -1101,15 +1212,15 @@ Start-Script
             
 ## TO DO
 ##
-## > Re-Order functions for ease of reading
-## > Add functions for Remove User
-## > Add functions for Set user Group
-## > Add functions for Remove from user group
-## > Add functions for Enable Accountr
-## > Add functions for Disable Account
-## > Add functions for Lock Workstation?
-## > Add functions for search groups
-## > Add functions for Create Group
-## > Add functions for Remove Group
-## > Add functions for Add members to group
-## > Add functions for Remove members from group
+## > ListChildOU
+## > ListChildObject
+
+## > ListSecGroupMembers
+## > AddUserToSecGroup
+## > RemoveUserFromSecGroup
+
+## > Generate Complex Password
+
+## Future Build intentions:
+##
+## > Add error checking to functions
