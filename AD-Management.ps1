@@ -162,8 +162,8 @@ Process {
         ################
         # Still to do! #
         ################
-            $rand = Get-Random -Maximum 999
-            $script:password = 'Welcome=' + $rand
+            #$rand = Get-Random -Maximum 999
+            #$script:password = 'Welcome=' + $rand
             }
             Catch {
             Write-Host -BackgroundColor Red "Error: $($_.Exception)"
@@ -172,7 +172,8 @@ Process {
         }
         End {
             If ($?) {
-                      Write-Host 'Random Complex Password is:' $script:password
+                      #Write-Host 'Random Complex Password is:' $script:password
+                      Write-Host 'Functionality not implemented yet'
                       Write-Host ' '
                       Pause-ForInput
                       Start-Options
